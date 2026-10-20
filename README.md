@@ -48,6 +48,10 @@ sql/         SQL files for objects created outside notebooks
 3. Run the notebooks in numeric order.
 4. Create the materialized view from `sql/` using the SQL Editor (it needs a SQL warehouse).
 
+## Notes
+
+- **Materialized view runs outside notebooks.** Materialized views require a SQL warehouse. The notebooks in this project run on serverless general compute (Databricks Free Edition), which returns `MV_NOT_ENABLED_ON_SERVERLESS_GENERIC_COMPUTE`. For that reason, the view is created from the SQL Editor, and its code is versioned in `sql/`.
+
 ## Roadmap
 
 - [ ] pytest and CI with GitHub Actions
