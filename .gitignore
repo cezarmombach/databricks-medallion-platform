@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Data files (only synthetic data is used; never commit datasets)
+*.csv
+*.parquet
+data/
+
+# Secrets and local configuration
+*.token
+*.pem
+.databrickscfg
