@@ -1,5 +1,5 @@
 # Method: GitHub Actions workflow (YAML)
-# Objective: Run the pytest unit tests automatically on every push and pull request.
+# Objective: Run the pytest unit tests of the metrics code and of the API automatically on every push and pull request.
 name: Unit tests
 
 on:
@@ -26,4 +26,28 @@ jobs:
         run: pip install pytest
 
       - name: Run unit tests
+        run: python -m pytest tests -v
+
+  api-test:
+    runs-on: ubuntu-latest
+    # Every "run" step below starts inside the api/ folder,
+    # so "from app.main import ..." in the tests resolves correctly.
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Same major version as the Dockerfile (python:3.12-slim)
+          python-version: "3.12"
+
+      - name: Install API dependencies
+        # requirements.txt has the app libraries; pytest and httpx are only needed for tests
+        run: pip install -r requirements.txt pytest httpx
+
+      - name: Run API tests
         run: python -m pytest tests -v
