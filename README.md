@@ -52,7 +52,7 @@ There are two kinds of tests, and each one catches errors the other cannot:
 
 The data quality notebook ends with a fail-fast `assert`: if any check fails, the job stops and sends an alert.
 
-**Continuous integration:** a GitHub Actions workflow runs the pytest suite on every push to `main` and on pull requests.
+**Continuous integration:** a GitHub Actions workflow runs two jobs on every push to `main` and on pull requests: the pytest suite for `src/` and the API tests in `api/`.
 
 ## Orchestration
 
@@ -68,6 +68,18 @@ setup -> bronze_ingestion -> silver_transformation -> gold_modeling_1 -> gold_mo
 
 An **Airflow DAG** in `airflow/` can trigger this job. Airflow is not required here, because Databricks Workflows already handles scheduling, quality gate and alerts. It was added as a learning exercise (see `airflow/README.md`).
 
+## API
+
+A FastAPI service in `api/` serves the gold marts as JSON, reading live from a Databricks SQL warehouse. It runs in a Docker container and has its own unit tests. See [`api/README.md`](api/README.md).
+
+| Endpoint | Returns |
+|---|---|
+| `GET /kpis/monthly-balance` | Net balance per month |
+| `GET /kpis/failure-rate?category=` | Failure rate per category |
+| `GET /kpis/monthly-category?year=&month=` | Completed amount per month and category |
+
+Queries are parameterized and inputs are validated. The token is read from an environment variable and is never in the code or in the Docker image.
+
 ## Repository structure
 
 ```text
@@ -76,8 +88,9 @@ sql/         SQL files for objects created outside notebooks
 src/         Business rule functions (pure Python)
 tests/       pytest unit tests for src/
 airflow/     Airflow DAG that triggers the Databricks job (learning exercise)
+api/         FastAPI service that serves the gold marts, with Dockerfile and tests
 powerbi/     Power BI report documentation: data model, DAX measures and screenshots
-.github/     GitHub Actions workflow that runs the tests on every push
+.github/     GitHub Actions workflow that runs the unit tests and the API tests on every push
 ```
 
 ## How to run
@@ -88,6 +101,7 @@ powerbi/     Power BI report documentation: data model, DAX measures and screens
 4. Create the materialized view from `sql/` using the SQL Editor (it needs a SQL warehouse).
 5. To run the unit tests, run `12_run_unit_tests`, or run `python -m pytest tests` locally.
 6. Optional: rebuild the Power BI report following `powerbi/README.md`.
+7. Optional: run the API following `api/README.md`.
 
 ## Notes
 
@@ -101,4 +115,4 @@ powerbi/     Power BI report documentation: data model, DAX measures and screens
 - [x] pytest and CI with GitHub Actions
 - [x] Orchestration with Databricks Workflows and Airflow
 - [x] Power BI dashboard
-- [ ] Docker and FastAPI
+- [x] Docker and FastAPI
