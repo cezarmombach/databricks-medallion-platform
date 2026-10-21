@@ -229,3 +229,6 @@ data/
 *.token
 *.pem
 .databrickscfg
+
+# Power BI report files (not versioned in this repository)
+*.pbix
