@@ -16,6 +16,25 @@ Raw transactions flow through three layers, each one cleaner and closer to the b
 
 The source data is generated with a fixed random seed (reproducible) and contains intentional dirty data (missing categories, inconsistent casing, comma decimal separators and duplicated rows), which is cleaned in the silver layer.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    SRC["Synthetic data generator"]
+
+    subgraph JOB["Databricks job: medallion_pipeline"]
+        B["Bronze<br/>raw data"] --> S["Silver<br/>cleaned and deduplicated"]
+        S --> G["Gold<br/>star schema and marts"]
+        G --> DQ["Data quality gate<br/>13 checks"]
+    end
+
+    SRC --> B
+    G --> PBI["Power BI dashboard"]
+    G --> API["FastAPI in Docker"]
+    AF["Airflow DAG"] -. triggers .-> JOB
+    GH["GitHub Actions"] -. tests .-> API
+```
+
 ## Dashboard
 
 A Power BI report (Import mode) built on the gold layer. Its measures match the marts built in Databricks. See [`powerbi/`](powerbi/) for the data model and the DAX measures.
