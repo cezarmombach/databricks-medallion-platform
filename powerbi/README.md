@@ -6,9 +6,10 @@ A Power BI report built on the gold layer of this project (star schema in Import
 
 ## Files
 
-- `financial_dashboard.pbix`: the report. It includes the imported data (synthetic), so it opens without a Databricks connection. Refreshing it requires access to a Databricks SQL warehouse.
 - `dashboard_overview.png`: screenshot of the report page.
 - `model_view.png`: screenshot of the data model.
+
+The `.pbix` file is not included in this repository. To rebuild the report, connect Power BI Desktop to a Databricks SQL warehouse (Databricks connector, Import mode), load the seven gold tables (`fact_transactions`, the three dimensions and the three marts), create the relationships described below and add the measures defined in this document.
 
 ## Data model
 
