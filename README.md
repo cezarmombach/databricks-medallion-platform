@@ -14,6 +14,8 @@ Raw transactions flow through three layers, each one cleaner and closer to the b
 | Silver | `workspace.silver` | Typed, cleaned and deduplicated data |
 | Gold | `workspace.gold` | Star schema and business marts, ready for analytics |
 
+The source data is generated with a fixed random seed (reproducible) and contains intentional dirty data (missing categories, inconsistent casing, comma decimal separators and duplicated rows), which is cleaned in the silver layer.
+
 ## Gold layer
 
 **Star schema** (grain: one row per transaction):
@@ -32,30 +34,63 @@ Raw transactions flow through three layers, each one cleaner and closer to the b
 - **Advanced SQL:** CTEs, Top-N, subqueries, `CASE WHEN`, `HAVING`
 - **SCD Type 2:** `dim_account_scd2` with `valid_from`, `valid_to`, `is_current` and a point-in-time join
 - **Materialized view:** `mv_failure_rate_category` (see `sql/`)
-- **Data quality:** 13 automated checks (uniqueness, nulls, orphan keys, accepted values, ranges, reconciliation) with a fail-fast gate
+
+## Quality and testing
+
+There are two kinds of tests, and each one catches errors the other cannot:
+
+| | What it checks | Where it runs |
+|---|---|---|
+| **Data quality** (`11_data_quality`) | The **real data**: uniqueness, nulls, orphan keys, accepted values, ranges and reconciliation between layers (13 checks) | In Databricks, as the last task of the pipeline |
+| **Unit tests** (`tests/`) | The **code**: business rules in `src/metrics.py`, with known inputs and expected outputs (pytest) | Locally, in a notebook and in GitHub Actions |
+
+The data quality notebook ends with a fail-fast `assert`: if any check fails, the job stops and sends an alert.
+
+**Continuous integration:** a GitHub Actions workflow runs the pytest suite on every push to `main` and on pull requests.
+
+## Orchestration
+
+The pipeline runs as a **Databricks job** (`medallion_pipeline`), one task per notebook, in this order:
+
+```text
+setup -> bronze_ingestion -> silver_transformation -> gold_modeling_1 -> gold_modeling_2 -> gold_modeling_3 -> gold_marts -> data_quality_gate
+```
+
+- Every write uses `overwrite` (or `CREATE ... IF NOT EXISTS`), so the pipeline is **idempotent**: running it twice gives the same result (500 rows in the fact table both times).
+- The job has a daily schedule and failure notifications.
+- The data quality gate is the last task. A failed check marks the job as failed.
+
+An **Airflow DAG** in `airflow/` can trigger this job. Airflow is not required here, because Databricks Workflows already handles scheduling, quality gate and alerts. It was added as a learning exercise (see `airflow/README.md`).
 
 ## Repository structure
 
 ```text
-notebooks/   Databricks notebooks, numbered in execution order (01 to 11)
+notebooks/   Databricks notebooks, numbered in execution order (01 to 12)
 sql/         SQL files for objects created outside notebooks
+src/         Business rule functions (pure Python)
+tests/       pytest unit tests for src/
+airflow/     Airflow DAG that triggers the Databricks job (learning exercise)
+.github/     GitHub Actions workflow that runs the tests on every push
 ```
 
 ## How to run
 
 1. Create a free [Databricks Free Edition](https://www.databricks.com/learn/free-edition) workspace.
 2. Clone this repository as a Git folder.
-3. Run the notebooks in numeric order.
+3. Run the notebooks in numeric order, or create a job with one task per notebook (see Orchestration above). Notebooks `07` to `10` are analyses and exercises and are not part of the job.
 4. Create the materialized view from `sql/` using the SQL Editor (it needs a SQL warehouse).
+5. To run the unit tests, run `12_run_unit_tests`, or run `python -m pytest tests` locally.
 
 ## Notes
 
 - **Materialized view runs outside notebooks.** Materialized views require a SQL warehouse. The notebooks in this project run on serverless general compute (Databricks Free Edition), which returns `MV_NOT_ENABLED_ON_SERVERLESS_GENERIC_COMPUTE`. For that reason, the view is created from the SQL Editor, and its code is versioned in `sql/`.
+- **Scheduling is owned by Databricks Workflows.** The Airflow DAG only triggers the job and exists as a learning exercise.
+- **Write-then-audit design.** The pipeline writes the gold tables first and audits them afterwards. If a check fails, the job stops and alerts, but the tables were already written. A write-audit-publish pattern would avoid that.
 
 ## Roadmap
 
-- [ ] pytest and CI with GitHub Actions
-- [ ] Orchestration with Databricks Workflows and Airflow
+- [x] pytest and CI with GitHub Actions
+- [x] Orchestration with Databricks Workflows and Airflow
 - [ ] Power BI dashboard
 - [ ] GCP version (BigQuery, Pub/Sub)
 - [ ] Docker and FastAPI
