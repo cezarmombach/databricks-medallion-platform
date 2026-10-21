@@ -16,6 +16,12 @@ Raw transactions flow through three layers, each one cleaner and closer to the b
 
 The source data is generated with a fixed random seed (reproducible) and contains intentional dirty data (missing categories, inconsistent casing, comma decimal separators and duplicated rows), which is cleaned in the silver layer.
 
+## Dashboard
+
+A Power BI report (Import mode) built on the gold layer. Its measures match the marts built in Databricks. See [`powerbi/`](powerbi/) for the data model and the DAX measures.
+
+![Dashboard overview](powerbi/dashboard_overview.png)
+
 ## Gold layer
 
 **Star schema** (grain: one row per transaction):
@@ -70,6 +76,7 @@ sql/         SQL files for objects created outside notebooks
 src/         Business rule functions (pure Python)
 tests/       pytest unit tests for src/
 airflow/     Airflow DAG that triggers the Databricks job (learning exercise)
+powerbi/     Power BI report documentation: data model, DAX measures and screenshots
 .github/     GitHub Actions workflow that runs the tests on every push
 ```
 
@@ -80,17 +87,18 @@ airflow/     Airflow DAG that triggers the Databricks job (learning exercise)
 3. Run the notebooks in numeric order, or create a job with one task per notebook (see Orchestration above). Notebooks `07` to `10` are analyses and exercises and are not part of the job.
 4. Create the materialized view from `sql/` using the SQL Editor (it needs a SQL warehouse).
 5. To run the unit tests, run `12_run_unit_tests`, or run `python -m pytest tests` locally.
+6. Optional: rebuild the Power BI report following `powerbi/README.md`.
 
 ## Notes
 
 - **Materialized view runs outside notebooks.** Materialized views require a SQL warehouse. The notebooks in this project run on serverless general compute (Databricks Free Edition), which returns `MV_NOT_ENABLED_ON_SERVERLESS_GENERIC_COMPUTE`. For that reason, the view is created from the SQL Editor, and its code is versioned in `sql/`.
 - **Scheduling is owned by Databricks Workflows.** The Airflow DAG only triggers the job and exists as a learning exercise.
 - **Write-then-audit design.** The pipeline writes the gold tables first and audits them afterwards. If a check fails, the job stops and alerts, but the tables were already written. A write-audit-publish pattern would avoid that.
+- **Partial month.** October covers only 2026-10-01 to 2026-10-11, so it should not be compared directly with September.
 
 ## Roadmap
 
 - [x] pytest and CI with GitHub Actions
 - [x] Orchestration with Databricks Workflows and Airflow
-- [ ] Power BI dashboard
-- [ ] GCP version (BigQuery, Pub/Sub)
+- [x] Power BI dashboard
 - [ ] Docker and FastAPI
