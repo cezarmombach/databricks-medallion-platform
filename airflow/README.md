@@ -25,6 +25,6 @@ Local Airflow (Docker Compose) that triggers the Databricks job `medallion_pipel
 
 Airflow is **not required** here. The Databricks job already has its own schedule, the data quality gate and failure alerts, all handled by Databricks Workflows (Lakeflow Jobs). The DAG in this folder only triggers that job.
 
-Airflow was added as a **learning and portfolio exercise**: to practice writing DAGs, configuring Connections and integrating Airflow with Databricks.It becomes truly useful when a pipeline spans several tools (for example Databricks, BigQuery and dbt).
+Airflow was added as a **learning and portfolio exercise**: to practice writing DAGs, configuring Connections and integrating Airflow with Databricks. It becomes truly useful when a pipeline spans several tools (for example Databricks, dbt and a cloud data warehouse).
 
 Scheduling is owned by Databricks. The DAG uses `schedule=None` (manual trigger) to avoid running the pipeline twice.
